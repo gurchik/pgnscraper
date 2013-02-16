@@ -1,7 +1,32 @@
 #!/usr/bin/env python
 
+# Your chess.com username (or, in other words, the user you want to download the 
+# games for).
+#
+# Example:
+#     USERNAME = "myusername"
 USERNAME = "derekmaciel"
+
+# Optional: Your chess.com password. You only need to supply this if you are a
+# premium user and you wish to download games older than 6 weeks.
+#
+# Leave blank if you do not wish to take advantage of that
+#
+# Example with password:
+#     PASSWORD = "mypassword"
+# Example without password:
+#     PASSWORD = ""
 PASSWORD = ""
+
+# The path you wish to save your PGNs to. If on Windows and using forward
+# slashes, you must escape them. Do not add a trailing slash afterward
+#
+# Example on Windows:
+#     USERNAME = "C:\\Users\\Me\\pgns"
+# Example on Mac/Linux/Users
+#     USERNAME = "/home/me/pgns"
+# Bad example with trailing slash
+#    USERNAME = "/home/me/pgns/"
 PGNPATH  = "/Volumes/Data/pgn"
 
 import urllib2

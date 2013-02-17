@@ -40,8 +40,7 @@ def main():
         # Sign in
 
     # For each game type
-    #types = ['echess', 'live_bullet', 'live_blitz', 'live_standard']
-    types = ['echess']
+    types = ['echess', 'live_bullet', 'live_blitz', 'live_standard']
     
     saved = 0
     
@@ -67,13 +66,20 @@ def main():
                 if get_table_cell(soup, row, 1) == None:
                     break
                     
-                info = get_game_info(soup, row)
+                info = get_game_info(soup, row, gametype)
                 
                 # Figure out where the PGN will go
                 if gametype == 'echess':
-                    pgnroot = PGNPATH + "/correspondence"
-                else:
-                    pgnroot = PGNPATH + "/live"
+                    if info["is960"] == True:
+                        pgnroot = PGNPATH + "/correspondence/" + "chess960"
+                    else:
+                        pgnroot = PGNPATH + "/correspondence/" + "standard"
+                elif gametype == 'live_bullet':
+                    pgnroot = PGNPATH + "/live/" + "bullet"
+                elif gametype == 'live_blitz':
+                    pgnroot = PGNPATH + "/live/" + "blitz"
+                elif gametype == 'live_standard':
+                    pgnroot = PGNPATH + "/live/" + "standard"
                     
                 path = pgnroot + "/" + info['year'] + "/" + info['month'] 
                 if not exists(path):
@@ -84,7 +90,7 @@ def main():
                 destination = path + "/" + filename
                 if not exists(destination):
                     print "Downloading {0}".format(filename)
-                    url = "http://www.chess.com/echess/download_pgn?id={0}".format(game['id'])
+                    url = "http://www.chess.com/echess/download_pgn?id={0}".format(info['id'])
                     save_file(url, destination)
                     saved += 1
                 
@@ -109,11 +115,16 @@ def get_table_cell(soup, row, col):
     tag = soup.find("td", id=re.compile(expr))
     return tag
     
-def get_game_info(soup, row):
+def get_game_info(soup, row, gametype):
     # Cells are in the format "c14_row{ROW}_{COL}"
-    # where {ROW} starts from 0 but {COL} starts from 1
     
     info = {}
+    
+    # Check the images in the 0th column.
+    cell = get_table_cell(soup, row, 0)
+    for tags in cell.find_all("span"):
+        info["is960"] = "c960" in tags["class"] # One of the span's classes would be "c960"
+        info["analyzed"] = "computer" in tags["class"] # Would only show if signed in
                 
     # White player
     cell = get_table_cell(soup, row, 1)
@@ -130,7 +141,11 @@ def get_game_info(soup, row):
     # Game ID
     cell = get_table_cell(soup, row, 7)
     link = cell.find("a")['href'] # the ID is part of the URL of the link in the cell
-    info['id'] = link.replace("/echess/game?id=", "") # /echess/ for corresp., /livechess/ otherwise
+    # /echess/ for corresp., /livechess/ otherwise
+    if gametype == 'echess':
+        info['id'] = link.replace("/echess/game?id=", "")
+    else:
+        info['id'] = link.replace("/livechess/game?id=", "")
                 
     # Date
     cell = get_table_cell(soup, row, 6)

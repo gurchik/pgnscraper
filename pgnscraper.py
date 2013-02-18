@@ -27,7 +27,7 @@ PASSWORD = ""
 #     USERNAME = "/home/me/pgns"
 # Bad example with trailing slash
 #    USERNAME = "/home/me/pgns/"
-PGNPATH  = "/Volumes/Data/pgn"
+PGNDIR  = "/Volumes/Data/pgn"
 
 import urllib2
 from bs4 import BeautifulSoup
@@ -39,11 +39,11 @@ def main():
     # If credentials supplied:
         # Sign in
 
-    # For each game type
-    types = ['echess', 'live_bullet', 'live_blitz', 'live_standard']
-    
+    # Files Saved counter
     saved = 0
     
+    # For each game type
+    types = ['echess', 'live_bullet', 'live_blitz', 'live_standard']
     for gametype in types:
         
         html = get_file("http://www.chess.com/home/game_archive?show={0}&member={1}".format(gametype, USERNAME))
@@ -64,30 +64,21 @@ def main():
                 # If the row 's first column does not exist, the row must not exist
                 # Go to the next game type
                 if get_table_cell(soup, row, 1) == None:
+                    print "Finished checking {0} games".format(gametype)
                     break
                     
                 info = get_game_info(soup, row, gametype)
+                path = get_path_from_info(info, gametype)
                 
-                # Figure out where the PGN will go
-                if gametype == 'echess':
-                    if info["is960"] == True:
-                        pgnroot = PGNPATH + "/correspondence/" + "chess960"
-                    else:
-                        pgnroot = PGNPATH + "/correspondence/" + "standard"
-                elif gametype == 'live_bullet':
-                    pgnroot = PGNPATH + "/live/" + "bullet"
-                elif gametype == 'live_blitz':
-                    pgnroot = PGNPATH + "/live/" + "blitz"
-                elif gametype == 'live_standard':
-                    pgnroot = PGNPATH + "/live/" + "standard"
-                    
-                path = pgnroot + "/" + info['year'] + "/" + info['month'] 
+                # If the directory structure does not exist, create it
                 if not exists(path):
                     makedirs(path)
                     
                 # If the pgn does not exist, download it
-                filename = "{0}_vs_{1}_{2}_{3}_{4}.pgn".format(info['white'], info['black'], info['year'], info['month'], info['day'])
+                date = "{0}_{1}_{2}".format(info['year'], info['month'], info['day'])
+                filename = "{0}_vs_{1}_{2}.pgn".format(info['white'], info['black'], date)
                 destination = path + "/" + filename
+                
                 if not exists(destination):
                     print "Downloading {0}".format(filename)
                     url = "http://www.chess.com/echess/download_pgn?id={0}".format(info['id'])
@@ -155,6 +146,35 @@ def get_game_info(soup, row, gametype):
     info['day'] = "%02d" % int(date_str.split("/")[1]) # Add leading zero if needed
     
     return info
+    
+def get_path_from_info(info, gametype):
+    # The path is PGNPATH/type/subtype/year/month
+    # Where type is either "live" or "correspondence"
+    # And subtype could be "chess960" or "standard" for correspondence games
+    # Or "bullet", "blitz", or "standard" for live games
+
+    path = ""
+
+    if gametype == 'echess':
+        if info["is960"] == True: # if this is a 960 game
+            path = "/correspondence/chess960"
+        else:
+            path = "/correspondence/standard"
+                        
+    elif gametype == 'live_bullet':
+        path = "/live/bullet"
+                    
+    elif gametype == 'live_blitz':
+        path = "/live/blitz"
+                    
+    elif gametype == 'live_standard':
+        path = "/live/standard"
+        
+    # Add the year and month to the end of the path
+    path = "{0}/{1}/{2}".format(path, info['year'], info['month']) 
+        
+    return PGNDIR + "/" + path
+    
 
 if __name__ == '__main__':
     main()

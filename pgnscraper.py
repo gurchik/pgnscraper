@@ -46,46 +46,53 @@ def main():
     types = ['echess', 'live_bullet', 'live_blitz', 'live_standard']
     for gametype in types:
         
-        html = get_file("http://www.chess.com/home/game_archive?show={0}&member={1}".format(gametype, USERNAME))
-        soup = BeautifulSoup(html)
-        
-        # If no games are found of this type, go to the next type
-        if soup.find("table", id="c14") == None: 
-            print "No games found of type {0}".format(gametype)
-            continue
-            
+        url = "http://www.chess.com/home/game_archive?show={0}&member={1}".format(gametype, USERNAME)
+        try:
+            html = get_file(url)
+        except URLError:
+            print "I could not access the page at {0}".format(url)
+            print "The server may be down. In that case, I'm sure it'll work again later."
         else:
-            row = 0
+            soup = BeautifulSoup(html)
+        
+            # If no games are found of this type, go to the next type
+            if soup.find("table", id="c14") == None: 
+                print "No games found of type {0}".format(gametype)
+                continue
             
-            # For every game listed:
-            while True:
-                game = {}
+            else:
+                
+                print "Checking {0} games".format(gametype)
+                row = 0
             
-                # If the row 's first column does not exist, the row must not exist
-                # Go to the next game type
-                if get_table_cell(soup, row, 1) == None:
-                    print "Finished checking {0} games".format(gametype)
-                    break
+                # For every game listed:
+                while True:
+                    game = {}
+            
+                    # If the row 's first column does not exist, the row must not exist
+                    # Go to the next game type
+                    if get_table_cell(soup, row, 1) == None:
+                        break
                     
-                info = get_game_info(soup, row, gametype)
-                path = get_path_from_info(info, gametype)
+                    info = get_game_info(soup, row, gametype)
+                    path = get_path_from_info(info, gametype)
                 
-                # If the directory structure does not exist, create it
-                if not exists(path):
-                    makedirs(path)
+                    # If the directory structure does not exist, create it
+                    if not exists(path):
+                        makedirs(path)
                     
-                # If the pgn does not exist, download it
-                date = "{0}_{1}_{2}".format(info['year'], info['month'], info['day'])
-                filename = "{0}_vs_{1}_{2}.pgn".format(info['white'], info['black'], date)
-                destination = path + "/" + filename
+                    # If the pgn does not exist, download it
+                    date = "{0}_{1}_{2}".format(info['year'], info['month'], info['day'])
+                    filename = "{0}_vs_{1}_{2}.pgn".format(info['white'], info['black'], date)
+                    destination = path + "/" + filename
                 
-                if not exists(destination):
-                    print "Downloading {0}".format(filename)
-                    url = "http://www.chess.com/echess/download_pgn?id={0}".format(info['id'])
-                    save_file(url, destination)
-                    saved += 1
+                    if not exists(destination):
+                        print "Downloading {0}".format(filename)
+                        url = "http://www.chess.com/echess/download_pgn?id={0}".format(info['id'])
+                        save_file(url, destination)
+                        saved += 1
                 
-                row += 1
+                    row += 1
                 
     print "Saved {0} files".format(saved)
                     
@@ -95,10 +102,20 @@ def get_file(url):
     return response.read()
     
 def save_file(url, path):
-    data = get_file(url)
-    output = open(path, "wb")
-    output.write(data)
-    output.close
+    try:
+        data = get_file(url)
+    except URLError:
+        print "I could not download the file at {0}".format(url)
+        print "The server may be down. In that case, I'm sure it'll work again later."
+    else:
+        try:
+            output = open(path, "wb")
+        except IOError:
+            print "I could not write to the file {0}".format(path)
+            print "Make sure I have permission to write to that directory and try again"
+        else:
+            output.write(data)
+            output.close
     
 def get_table_cell(soup, row, col):
     # All cells in the table have an id of "c14_row{row number}_{col number}"

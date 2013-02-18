@@ -61,7 +61,6 @@ def main():
                 continue
             
             else:
-                
                 print "Checking {0} games".format(gametype)
                 row = 0
             
@@ -74,8 +73,14 @@ def main():
                     if get_table_cell(soup, row, 1) == None:
                         break
                     
+                    # Technically, get_path_from_info() and get_game_info() could be
+                    # merged into a simple get_path().
+                    # An info variable is used however because if the script is expanded to 
+                    # work on domains other than chess.com, there will need to be 
+                    # get_game_info() functions for those domains. And I did not want
+                    # to rewrite get_path_from_info() every time.
                     info = get_game_info(soup, row, gametype)
-                    path = get_path_from_info(info, gametype)
+                    path = PGNDIR + "/" + get_path_from_info(info, gametype)
                 
                     # If the directory structure does not exist, create it
                     if not exists(path):
@@ -93,15 +98,24 @@ def main():
                         saved += 1
                 
                     row += 1
-                
+                    
+        print "Finished checking {0} games\n".format(gametype)
+            
+    print "Done."    
     print "Saved {0} files".format(saved)
                     
         
 def get_file(url):
+    """ Downloads and returns the data at the given url """
     response = urllib2.urlopen(url)
     return response.read()
     
 def save_file(url, path):
+    """ 
+    Downloads the data at the given url and saves it to the given path.
+    This function uses get_file() to download the file. If get_file()
+    throws a URLError, the file to be saved will not be created.
+    """
     try:
         data = get_file(url)
     except URLError:
@@ -116,14 +130,25 @@ def save_file(url, path):
         else:
             output.write(data)
             output.close
-    
+
 def get_table_cell(soup, row, col):
+    """
+    Returns the HTML table cell tag at the given row and col
+    from the Game History table.
+    """
     # All cells in the table have an id of "c14_row{row number}_{col number}"
     expr = "c14_row{0}_{1}".format(row, col)
     tag = soup.find("td", id=re.compile(expr))
     return tag
     
 def get_game_info(soup, row, gametype):
+    """
+    Scrapes the game information from the given row and returns
+    it as a dictionary. More speciically, it searches for the
+    white and black players, the game ID, the year, month, 
+    and day the game was completed, as well as if the game is a
+    960 game and if the game has been analyzed or not.
+    """
     # Cells are in the format "c14_row{ROW}_{COL}"
     
     info = {}
@@ -141,10 +166,6 @@ def get_game_info(soup, row, gametype):
     # Black player
     cell = get_table_cell(soup, row, 2)
     info['black'] = cell.find_all("a")[1].get_text() #Player's name is the second link in the cell
-        
-    # Number of moves
-    cell = get_table_cell(soup, row, 5)
-    info['moves'] = cell.get_text()
         
     # Game ID
     cell = get_table_cell(soup, row, 7)
@@ -165,10 +186,17 @@ def get_game_info(soup, row, gametype):
     return info
     
 def get_path_from_info(info, gametype):
-    # The path is PGNPATH/type/subtype/year/month
-    # Where type is either "live" or "correspondence"
-    # And subtype could be "chess960" or "standard" for correspondence games
-    # Or "bullet", "blitz", or "standard" for live games
+    """
+    Determines, from the given game information, where
+    its PGN file would be saved and returns its
+    expected location.
+    
+    The path returned would be
+    `type/subtype/year/month`, where "type" is either
+    "live" or "correspondence", and the subtype is either
+    "chess960" or "standard" for correspondence games
+    or "bullet", "blitz", or "standard" for live games.
+    """
 
     path = ""
 
@@ -190,7 +218,7 @@ def get_path_from_info(info, gametype):
     # Add the year and month to the end of the path
     path = "{0}/{1}/{2}".format(path, info['year'], info['month']) 
         
-    return PGNDIR + "/" + path
+    return path
     
 
 if __name__ == '__main__':

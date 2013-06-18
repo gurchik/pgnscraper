@@ -27,7 +27,7 @@ PASSWORD = ""
 #     USERNAME = "/home/me/pgns"
 # Bad example with trailing slash
 #    USERNAME = "/home/me/pgns/"
-PGNDIR  = "~/hallo/pgn"
+PGNDIR  = "~/pgns"
 
 import urllib2
 from bs4 import BeautifulSoup
